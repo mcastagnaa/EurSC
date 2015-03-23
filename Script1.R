@@ -2,114 +2,93 @@ library(ggplot2)
 library(reshape2)
 library(plyr)
 library(zoo)
+library(PerformanceAnalytics)
 
 rm(list =ls(all=TRUE))
 RawData <- read.csv("RawData.csv", header=TRUE)
+RawData$Date <- as.Date(RawData$Date, format="%d/%m/%Y")
+n <-nrow(RawData)
+head(RawData)
+
+RawData$IGNISret <- c(NA,RawData$IGNIS[2:n]/RawData$IGNIS[1:n-1]-1)
+RawData$BARINGret <- c(NA,RawData$BARING[2:n]/RawData$BARING[1:n-1]-1)
+RawData$THREADret <- c(NA,RawData$THREAD[2:n]/RawData$THREAD[1:n-1]-1)
+RawData$LAZARDret <- c(NA,RawData$LAZARD[2:n]/RawData$LAZARD[1:n-1]-1)
+RawData$HENDERret <- c(NA,RawData$HENDER[2:n]/RawData$HENDER[1:n-1]-1)
+RawData$BLACKRret <- c(NA,RawData$BLACKR[2:n]/RawData$BLACKR[1:n-1]-1)
+RawData$JCSCEXPTret <- c(NA,RawData$JCSCEXPT[2:n]/RawData$JCSCEXPT[1:n-1]-1)
+
+
+RawData$IGNISrr <- RawData$IGNISret - RawData$JCSCEXPTret
+RawData$BARINGrr <- RawData$BARINGret - RawData$JCSCEXPTret
+RawData$THREADrr <- RawData$THREADret - RawData$JCSCEXPTret
+RawData$LAZARDrr <- RawData$LAZARDret - RawData$JCSCEXPTret
+RawData$HENDERrr <- RawData$HENDERret - RawData$JCSCEXPTret
+RawData$BLACKRrr <- RawData$BLACKRret - RawData$JCSCEXPTret
 
 head(RawData)
-# apply(RawData[c("JP_LCEMD", "SH_LCEMD", "JP_EMD", "SH_EMD")], 2, function(x) sd(x, na.rm=TRUE)*sqrt(12))
-# 
-# RollingObs <- 20
-# 
-# RollSd <- data.frame(cbind(RawData$Date, 
-#                            rollapplyr(RawData[c("JP_LCEMD", 
-#                                                 "SH_LCEMD", 
-#                                                 "JP_EMD", 
-#                                                 "SH_EMD", 
-#                                                 "B_LCEMD", 
-#                                                 "B_EMD")], 
-#                                       RollingObs, sd, fill=NA)))
-# colnames(RollSd)[1] <- "Date"
-# 
-# head(RollSd)
-# RollSd$Date <- as.Date(RollSd$Date)
-# 
-# meltdf<-melt(RollSd,id="Date")
-# ggplot(na.omit(meltdf), 
-#        aes(x=Date, y=value, colour=variable, group=variable, linetype = variable, size= variable)) +
-#   geom_line() + 
-#   ylab(paste0("Rolling sd (", toString(RollingObs), "obs)")) + 
-#   scale_linetype_manual(values= c("solid","dashed","solid","dashed", "dotted", "dotted")) +
-#   scale_color_manual(values= c("purple", "purple", "orange", "orange", "purple", "orange")) + 
-#   scale_size_manual(values= c(1.1, 1.1, 1.1, 1.1, 1, 1)) + 
-#   theme(legend.position="bottom")
-# 
-# 
-# RawData$Date <- as.Date(RawData$Date, format="%d/%m/%Y")
-# RawData$SH_EMDr <- RawData$SH_EMD - RawData$B_EMD
-# RawData$SH_LEMDr <- RawData$SH_LCEMD - RawData$B_LCEMD
-# RawData$JP_EMDr <- RawData$JP_EMD - RawData$B_EMD
-# RawData$JP_LEMDr <- RawData$JP_LCEMD - RawData$B_LCEMD
-# 
-# head(RawData)
-# 
-# EMDset <- subset(RawData, !is.na(SH_EMD) | !is.na(JP_EMD), select=c(Date, SH_EMD, JP_EMD, B_EMD))
-# LEMDset <- subset(RawData, !is.na(SH_LCEMD) | !is.na(JP_LCEMD), select=c(Date, SH_LCEMD, JP_LCEMD, B_LCEMD))
-# EMDrr <- subset(RawData, !is.na(SH_EMD) | !is.na(JP_EMD), select=c(Date, SH_EMDr, JP_EMDr))
-# LEMDrr <- subset(RawData, !is.na(SH_LCEMD) | !is.na(JP_LCEMD), select=c(Date, SH_LEMDr, JP_LEMDr))
-# 
-# W_JP_LCEMD <- data.frame(W_JP_LCEMD=RawData$B_LCEMD[!is.na(RawData$JP_LCEMD)])
-# W_SH_LCEMD <- data.frame(W_SH_LCEMD=RawData$B_LCEMD[!is.na(RawData$SH_LCEMD)])
-# W_JP_EMD <- data.frame(W_JP_EMD=RawData$B_EMD[!is.na(RawData$JP_EMD)])
-# W_SH_EMD <- data.frame(W_SH_EMD=RawData$B_EMD[!is.na(RawData$SH_EMD)])
-# 
-# WORLDS <- do.call(rbind.fill, list(W_JP_LCEMD, W_SH_LCEMD, W_JP_EMD, W_SH_EMD))
-# apply(WORLDS, 2, function(x) sd(x, na.rm=TRUE)*sqrt(12))
-# rm(list =ls(pattern="W_"))
-# 
-# meltdf<-melt(EMDset,id="Date")
-# ggplot(meltdf, 
-#         aes(x=Date, y=value, colour=variable, group=variable)) +
-#         geom_line() + 
-#         ylab("Absolute Returns") + 
-#         theme(legend.position="bottom")
-# 
-# 
-# meltdf<-melt(LEMDset,id="Date")
-# ggplot(meltdf, 
-#       aes(x=Date, y=value, colour=variable, group=variable)) +
-#       geom_line() + 
-#       ylab("Absolute Returns") + 
-#       theme(legend.position="bottom")
-# 
-# meltdf<-melt(EMDrr,id="Date")
-# ggplot(meltdf, 
-#        aes(x=Date, y=value, colour=variable, group=variable)) +
-#   geom_line() + 
-#   ylab("Relative Returns") + 
-#   theme(legend.position="bottom")
-# 
-# meltdf<-melt(LEMDrr,id="Date")
-# ggplot(meltdf, 
-#        aes(x=Date, y=value, colour=variable, group=variable)) +
-#   geom_line() + 
-#   ylab("Relative Returns") + 
-#   theme(legend.position="bottom")
-# 
-# LEMDrr <- subset(RawData, !is.na(SH_LCEMD) & !is.na(JP_LCEMD), select=c(Date, SH_LEMDr, JP_LEMDr))
-# meltdf<-melt(LEMDrr,id="Date")
-# ggplot(meltdf, 
-#        aes(x=Date, y=value, colour=variable, group=variable)) +
-#   geom_line() + 
-#   ylab("Relative Returns") + 
-#   theme(legend.position="bottom")
-# 
-# head(EMDrr)
-# ks.test(EMDrr$SH_EMDr, EMDrr$JP_EMDr, alternative="two.sided", exact=NULL)
-# 
-# LEMDrr <- subset(RawData, !is.na(SH_LCEMD) | !is.na(JP_LCEMD), select=c(Date, SH_LEMDr, JP_LEMDr))
-# head(LEMDrr)
-# ks.test(LEMDrr$SH_LEMDr, LEMDrr$JP_LEMDr, alternative="two.sided", exact=NULL)
-# 
-# SH <- na.omit(EMDrr$SH_EMDr)
-# JP <- na.omit(EMDrr$JP_EMDr)
-# 
-# plot(ecdf(SH), 
-#      xlim=range(c(SH, JP)))
-# plot(ecdf(JP), add=TRUE, lty="dashed")
-# 
-# SH <- SH[SH >-5]
-# #get rid of 10/09 observation
-# 
-# #ddply(RawData, c("JP_LCEMD", "JP_EMD", "SH_LCEMD", "SH_EMD"), summarize, sd=sd(value), sda=sd(value)*sqrt(12))
-# 
+
+RawData.rret <- subset(RawData, select=c(IGNISrr, 
+                                         BARINGrr, 
+                                         THREADrr, 
+                                         LAZARDrr,
+                                         HENDERrr,
+                                         BLACKRrr))
+rownames(RawData.rret) <- RawData$Date
+
+chart.CumReturns(RawData.rret,
+                 wealth.index = TRUE,
+                 legend.loc = "topleft",
+                 begin = "first",
+                 main="Value of $1",
+                 ylab = "'alpha' returns",
+                 xlab = NULL, 
+                 date.format = "%b/%y")
+
+
+chart.Correlation(RawData.rret, histogram = TRUE)
+
+RawData.r <- subset(RawData, select=c(IGNISret, 
+                                      BARINGret, 
+                                      THREADret, 
+                                      LAZARDret,
+                                      HENDERret,
+                                      BLACKRret,
+                                      JCSCEXPTret))
+rownames(RawData.r) <- RawData$Date
+
+
+chart.CumReturns(RawData.r,
+                 wealth.index = TRUE,
+                 legend.loc = "topleft",
+                 begin = "first",
+                 main="Value of $1",
+                 ylab = "absolute returns",
+                 xlab = NULL, 
+                 date.format = "%b/%y")
+
+RollingObs <- 54
+
+RollSd <- data.frame(cbind(RawData$Date, 
+                          rollapplyr(RawData[c("IGNISret", 
+                                               "BARINGret", 
+                                               "THREADret", 
+                                               "LAZARDret", 
+                                               "HENDERret", 
+                                               "BLACKRret",
+                                               "JCSCEXPTret")], 
+                                     RollingObs, sd, fill=NA)))
+colnames(RollSd)[1] <- "Date"
+
+head(RollSd)
+RollSd$Date <- as.Date(RollSd$Date)
+meltdf<-melt(RollSd,id="Date")
+ggplot(na.omit(meltdf), 
+      aes(x=Date, y=value, colour=variable, group=variable, size = variable, linetype = variable)) +
+      geom_line() + 
+      ylab(paste0("Rolling sd (", toString(RollingObs), "obs)")) +   
+      scale_linetype_manual(values= c(rep("solid",6), "dotted")) +
+# scale_color_manual(values= c("purple", "purple", "orange", "orange", "purple", "orange")) + 
+      scale_size_manual(values= c(1, rep(0.5, 5), 1)) + 
+      theme(legend.position="bottom") + 
+      scale_colour_brewer(palette="Set1")
