@@ -4,6 +4,8 @@ library(plyr)
 library(zoo)
 library(PerformanceAnalytics)
 library(scales)
+library(quantmod)
+library(Hmisc)
 
 #Data management
 
@@ -12,6 +14,9 @@ RawData <- read.csv("RawData.csv", header=TRUE)
 RawData$Date <- as.Date(RawData$Date, format="%d/%m/%Y")
 n <-nrow(RawData)
 head(RawData)
+rownames(RawData) <- RawData$Date
+
+#DOESN'T WORK periodReturn(as.ts(RawData[, 2:3]), period='monhtly')
 
 # there must be something better than this!
 RawData$IGNISret <- c(NA,RawData$IGNIS[2:n]/RawData$IGNIS[1:n-1]-1)
@@ -41,18 +46,6 @@ RawData.rret <- subset(RawData, select=c(IGNISrr,
 
 rownames(RawData.rret) <- RawData$Date
 
-chart.CumReturns(RawData.rret,
-                 wealth.index = TRUE,
-                 legend.loc = "topleft",
-                 begin = "first",
-                 main="Value of $1",
-                 ylab = "'alpha' returns",
-                 xlab = NULL, 
-                 date.format = "%b/%y")
-
-
-chart.Correlation(RawData.rret, histogram = TRUE)
-
 # absolute returns data frame
 RawData.r <- subset(RawData, select=c(IGNISret, 
                                       BARINGret, 
@@ -64,6 +57,35 @@ RawData.r <- subset(RawData, select=c(IGNISret,
 RawData.r$Rf <- rep(0,nrow(RawData.r))
 rownames(RawData.r) <- RawData$Date
 
+# rolling standard deviation
+RollingObs <- 54
+RollSd <- data.frame(cbind(RawData$Date, 
+                           rollapplyr(RawData[c("IGNISret", 
+                                                "BARINGret", 
+                                                "THREADret", 
+                                                "LAZARDret", 
+                                                "HENDERret", 
+                                                "BLACKRret",
+                                                "JCSCEXPTret")], 
+                                      RollingObs, sd, fill=NA)))
+colnames(RollSd)[1] <- "Date"
+
+RollSd$Date <- as.Date(RollSd$Date)
+head(RollSd)
+
+# charts
+chart.Correlation(RawData.rret, histogram = TRUE)
+
+chart.CumReturns(RawData.rret,
+                 wealth.index = TRUE,
+                 legend.loc = "topleft",
+                 begin = "first",
+                 main="Value of $1",
+                 ylab = "'alpha' returns",
+                 xlab = NULL, 
+                 date.format = "%b/%y")
+
+
 chart.CumReturns(RawData.r,
                  wealth.index = TRUE,
                  legend.loc = "topleft",
@@ -74,22 +96,8 @@ chart.CumReturns(RawData.r,
                  date.format = "%b/%y")
 
 
-# rolling standard deviation
-RollingObs <- 54
-RollSd <- data.frame(cbind(RawData$Date, 
-                          rollapplyr(RawData[c("IGNISret", 
-                                               "BARINGret", 
-                                               "THREADret", 
-                                               "LAZARDret", 
-                                               "HENDERret", 
-                                               "BLACKRret",
-                                               "JCSCEXPTret")], 
-                                     RollingObs, sd, fill=NA)))
-colnames(RollSd)[1] <- "Date"
-
-head(RollSd)
-RollSd$Date <- as.Date(RollSd$Date)
 meltdf<-melt(RollSd,id="Date")
+
 ggplot(na.omit(meltdf), 
       aes(x=Date, y=value, colour=variable, group=variable, size = variable, linetype = variable)) +
       geom_line() + 
@@ -99,9 +107,9 @@ ggplot(na.omit(meltdf),
       theme(legend.position="bottom") + 
       scale_colour_brewer(palette="Set1")
 
+
+# extra charts
 charts.PerformanceSummary(RawData.rret)
-t(table.CalendarReturns(RawData.rret))
-table.Stats(RawData.rret)
 
 chart.Boxplot(RawData.rret)
 
@@ -117,9 +125,14 @@ chart.RollingPerformance(RawData.rret,
                          xlab = NULL, 
                          date.format = "%b/%y")
 
-table.SFM(RawData.r[, 1:6, drop = F], 
-           RawData.r[, 7, drop = F],
-          Rf = 0)
+# tables
+t(table.CalendarReturns(RawData.rret))
+
+result <- t(table.Stats(RawData.rret[, , drop = F]))
+textplot(format.df(result, na.blank=TRUE, numeric.dollar=FALSE, cdec=c(rep(1,2),rep(3,14))),
+         rmar = 0.8, cmar = 1.5,  max.cex=.9, halign = "center", valign = "top",
+         row.valign="center", wrap.rownames=10, wrap.colnames=10, mar = c(0,0,3,0)+0.1)
+        title(main="Statistics for relative returns")
 
 table.DownsideRisk(RawData.r[,1:6, drop=F], Rf = RawData.r[,7, drop=F])
 
