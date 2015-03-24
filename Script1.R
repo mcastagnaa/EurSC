@@ -3,6 +3,9 @@ library(reshape2)
 library(plyr)
 library(zoo)
 library(PerformanceAnalytics)
+library(scales)
+
+#Data management
 
 rm(list =ls(all=TRUE))
 RawData <- read.csv("RawData.csv", header=TRUE)
@@ -10,6 +13,7 @@ RawData$Date <- as.Date(RawData$Date, format="%d/%m/%Y")
 n <-nrow(RawData)
 head(RawData)
 
+# there must be something better than this!
 RawData$IGNISret <- c(NA,RawData$IGNIS[2:n]/RawData$IGNIS[1:n-1]-1)
 RawData$BARINGret <- c(NA,RawData$BARING[2:n]/RawData$BARING[1:n-1]-1)
 RawData$THREADret <- c(NA,RawData$THREAD[2:n]/RawData$THREAD[1:n-1]-1)
@@ -17,7 +21,6 @@ RawData$LAZARDret <- c(NA,RawData$LAZARD[2:n]/RawData$LAZARD[1:n-1]-1)
 RawData$HENDERret <- c(NA,RawData$HENDER[2:n]/RawData$HENDER[1:n-1]-1)
 RawData$BLACKRret <- c(NA,RawData$BLACKR[2:n]/RawData$BLACKR[1:n-1]-1)
 RawData$JCSCEXPTret <- c(NA,RawData$JCSCEXPT[2:n]/RawData$JCSCEXPT[1:n-1]-1)
-
 
 RawData$IGNISrr <- RawData$IGNISret - RawData$JCSCEXPTret
 RawData$BARINGrr <- RawData$BARINGret - RawData$JCSCEXPTret
@@ -28,12 +31,14 @@ RawData$BLACKRrr <- RawData$BLACKRret - RawData$JCSCEXPTret
 
 head(RawData)
 
+# relative returns data frame
 RawData.rret <- subset(RawData, select=c(IGNISrr, 
                                          BARINGrr, 
                                          THREADrr, 
                                          LAZARDrr,
                                          HENDERrr,
                                          BLACKRrr))
+
 rownames(RawData.rret) <- RawData$Date
 
 chart.CumReturns(RawData.rret,
@@ -48,6 +53,7 @@ chart.CumReturns(RawData.rret,
 
 chart.Correlation(RawData.rret, histogram = TRUE)
 
+# absolute returns data frame
 RawData.r <- subset(RawData, select=c(IGNISret, 
                                       BARINGret, 
                                       THREADret, 
@@ -55,8 +61,8 @@ RawData.r <- subset(RawData, select=c(IGNISret,
                                       HENDERret,
                                       BLACKRret,
                                       JCSCEXPTret))
+RawData.r$Rf <- rep(0,nrow(RawData.r))
 rownames(RawData.r) <- RawData$Date
-
 
 chart.CumReturns(RawData.r,
                  wealth.index = TRUE,
@@ -67,8 +73,9 @@ chart.CumReturns(RawData.r,
                  xlab = NULL, 
                  date.format = "%b/%y")
 
-RollingObs <- 54
 
+# rolling standard deviation
+RollingObs <- 54
 RollSd <- data.frame(cbind(RawData$Date, 
                           rollapplyr(RawData[c("IGNISret", 
                                                "BARINGret", 
@@ -88,7 +95,32 @@ ggplot(na.omit(meltdf),
       geom_line() + 
       ylab(paste0("Rolling sd (", toString(RollingObs), "obs)")) +   
       scale_linetype_manual(values= c(rep("solid",6), "dotted")) +
-# scale_color_manual(values= c("purple", "purple", "orange", "orange", "purple", "orange")) + 
       scale_size_manual(values= c(1, rep(0.5, 5), 1)) + 
       theme(legend.position="bottom") + 
       scale_colour_brewer(palette="Set1")
+
+charts.PerformanceSummary(RawData.rret)
+t(table.CalendarReturns(RawData.rret))
+table.Stats(RawData.rret)
+
+chart.Boxplot(RawData.rret)
+
+chart.RiskReturnScatter(RawData.rret, 
+                        add.boxplot = TRUE, 
+                        sharpe.ratio = NULL)
+
+chart.RollingPerformance(RawData.rret,
+                         legend.loc = "topright",
+                         begin = "first",
+                         main="rolling 12-weeks performance",
+                         ylab = "'alpha' returns",
+                         xlab = NULL, 
+                         date.format = "%b/%y")
+
+table.SFM(RawData.r[, 1:6, drop = F], 
+           RawData.r[, 7, drop = F],
+          Rf = 0)
+
+table.DownsideRisk(RawData.r[,1:6, drop=F], Rf = RawData.r[,7, drop=F])
+
+table.Drawdowns(RawData.r[,1, drop=F])
