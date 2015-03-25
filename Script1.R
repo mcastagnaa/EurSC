@@ -111,7 +111,7 @@ ggplot(na.omit(meltdf),
 # extra charts
 charts.PerformanceSummary(RawData.rret)
 
-chart.Boxplot(RawData.rret)
+chart.Boxplot(RawData.rret, sort.by = "variance")
 
 chart.RiskReturnScatter(RawData.rret, 
                         add.boxplot = TRUE, 
