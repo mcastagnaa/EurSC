@@ -20,42 +20,22 @@ rownames(RawData) <- RawData$Date
 
 # there must be something better than this!
 RawData$IGNISret <- c(NA,RawData$IGNIS[2:n]/RawData$IGNIS[1:n-1]-1)
-RawData$BARINGret <- c(NA,RawData$BARING[2:n]/RawData$BARING[1:n-1]-1)
-RawData$THREADret <- c(NA,RawData$THREAD[2:n]/RawData$THREAD[1:n-1]-1)
-RawData$LAZARDret <- c(NA,RawData$LAZARD[2:n]/RawData$LAZARD[1:n-1]-1)
-RawData$HENDERret <- c(NA,RawData$HENDER[2:n]/RawData$HENDER[1:n-1]-1)
-RawData$BLACKRret <- c(NA,RawData$BLACKR[2:n]/RawData$BLACKR[1:n-1]-1)
 RawData$GARTPret <- c(NA,RawData$GARTPAN[2:n]/RawData$GARTPAN[1:n-1]-1)
 RawData$JCSCEXPTret <- c(NA,RawData$JCSCEXPT[2:n]/RawData$JCSCEXPT[1:n-1]-1)
 
 RawData$IGNISrr <- RawData$IGNISret - RawData$JCSCEXPTret
-RawData$BARINGrr <- RawData$BARINGret - RawData$JCSCEXPTret
-RawData$THREADrr <- RawData$THREADret - RawData$JCSCEXPTret
-RawData$LAZARDrr <- RawData$LAZARDret - RawData$JCSCEXPTret
-RawData$HENDERrr <- RawData$HENDERret - RawData$JCSCEXPTret
-RawData$BLACKRrr <- RawData$BLACKRret - RawData$JCSCEXPTret
 RawData$GARTPRrr <- RawData$GARTPret - RawData$JCSCEXPTret
 
 head(RawData)
 
 # relative returns data frame
 RawData.rret <- subset(RawData, select=c(IGNISrr, 
-                                         BARINGrr, 
-                                         THREADrr, 
-                                         LAZARDrr,
-                                         HENDERrr,
-                                         BLACKRrr,
                                          GARTPRrr))
 
 rownames(RawData.rret) <- RawData$Date
 
 # absolute returns data frame
 RawData.r <- subset(RawData, select=c(IGNISret, 
-                                      BARINGret, 
-                                      THREADret, 
-                                      LAZARDret,
-                                      HENDERret,
-                                      BLACKRret,
                                       GARTPret,
                                       JCSCEXPTret))
 RawData.r$Rf <- rep(0,nrow(RawData.r))
@@ -65,11 +45,6 @@ rownames(RawData.r) <- RawData$Date
 RollingObs <- 54
 RollSd <- data.frame(cbind(RawData$Date, 
                            rollapplyr(RawData[c("IGNISret", 
-                                                "BARINGret", 
-                                                "THREADret", 
-                                                "LAZARDret", 
-                                                "HENDERret", 
-                                                "BLACKRret",
                                                 "GARTPret",
                                                 "JCSCEXPTret")], 
                                       RollingObs, sd, fill=NA)))
@@ -108,7 +83,7 @@ ggplot(na.omit(meltdf),
       geom_line() + 
       ylab(paste0("Rolling sd (", toString(RollingObs), "obs)")) +   
       scale_linetype_manual(values= c(rep("solid",7), "dotted")) +
-      scale_size_manual(values= c(1, rep(0.5, 6), 1)) + 
+      scale_size_manual(values= c(1, 1, 0.5)) + 
       theme(legend.position="bottom") + 
       scale_colour_brewer(palette="Set1")
 
@@ -139,6 +114,6 @@ textplot(format.df(result, na.blank=TRUE, numeric.dollar=FALSE, cdec=c(rep(1,2),
          row.valign="center", wrap.rownames=10, wrap.colnames=10, mar = c(0,0,3,0)+0.1)
         title(main="Statistics for relative returns")
 
-table.DownsideRisk(RawData.r[,1:7, drop=F], Rf = RawData.r[,8, drop=F])
+table.DownsideRisk(RawData.r[,1:2, drop=F], Rf = RawData.r[,3, drop=F])
 
 table.Drawdowns(RawData.r[,1, drop=F])
